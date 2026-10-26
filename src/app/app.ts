@@ -4,12 +4,7 @@ import { NgFor, NgIf } from '@angular/common';
 
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import {
-    getAuth,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged
-  } from 'firebase/auth';
+
 
 interface Sesion {
   id?: string;
@@ -48,7 +43,6 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
-const auth = getAuth(firebaseApp);
 
 @Component({
   selector: 'app-root',
@@ -173,7 +167,7 @@ export class App implements OnInit {
             nombre: doc.data()['nombre'],
             email: doc.data()['email'],
             password: doc.data()['password'],
-            rol:doc.data()['rol']
+            rol: doc.data()['rol'] || 'alumno'
           })
         ) as Alumno[];
   
@@ -188,33 +182,37 @@ export class App implements OnInit {
 
     if (
       !this.nombreNuevoAlumno.trim() ||
-      !this.emailAlumno.trim() ||
-      !this.passwordAlumno.trim()
-    ) {
-  
+      !this.emailAlumno.trim() 
+    ) {  
       this.mostrarMensaje(
         'Complete todos los campos',
         'info'
-      );
-  
+      );  
       return;
-    }
-  
-    try {
-  
-      if (this.modoEdicionAlumno) {
-  
-        await updateDoc(
-          doc(
-            db,
-            'alumnos',
-            this.idAlumnoEnEdicion
-          ),
-          {
+    }  
+    try {  
+      if (this.modoEdicionAlumno) {  
+        const datosActualizados: any = {
             nombre: this.nombreNuevoAlumno,
             email: this.emailAlumno
-          }
-        );
+          };          
+          if (this.passwordAlumno.trim()) {          
+            datosActualizados.passwordHash =
+              await this.generarHash(
+                this.passwordAlumno
+              );          
+          }          
+          await updateDoc(
+            doc(
+              db,
+              'alumnos',
+              this.idAlumnoEnEdicion
+            ),
+            {
+              nombre: this.nombreNuevoAlumno,
+              email: this.emailAlumno
+            }
+          );
   
         this.cancelarEdicionAlumno();
   
@@ -225,14 +223,20 @@ export class App implements OnInit {
   
       } else {
   
-        await addDoc(
-          collection(db, 'alumnos'),
-          {
-            nombre: this.nombreNuevoAlumno,
-            email: this.emailAlumno,
-            password: this.passwordAlumno
-          }
-        );
+        const passwordHash = await this.generarHash(
+            this.passwordAlumno
+          );
+          
+          await addDoc(
+            collection(db, 'alumnos'),
+            {
+              nombre: this.nombreNuevoAlumno,
+              email: this.emailAlumno,
+              password: passwordHash,
+              rol: 'alumno'
+            }
+          );
+          
   
         this.nombreNuevoAlumno = '';
         this.emailAlumno = '';
@@ -256,11 +260,38 @@ export class App implements OnInit {
   
   }
  
+
+  async generarHash(texto: string): Promise<string> {
+
+    const encoder = new TextEncoder();
+    const data = encoder.encode(texto);
+  
+    const hashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      data
+    );
+  
+    const hashArray = Array.from(
+      new Uint8Array(hashBuffer)
+    );
+  
+    return hashArray
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+
   editarAlumno(alumno: Alumno) {
+
     this.modoEdicionAlumno = true;
-      this.idAlumnoEnEdicion = alumno.id;  
-    this.nombreNuevoAlumno = alumno.nombre;  
-    this.emailAlumno = alumno.email || '';  
+    this.idAlumnoEnEdicion = alumno.id;
+  
+    this.nombreNuevoAlumno = alumno.nombre;
+    this.emailAlumno = alumno.email;
+  
+    // Vacío por seguridad
+    this.passwordAlumno = '';
+  
   }
 
   cargarSesionesDesdeNube() {
@@ -282,6 +313,7 @@ export class App implements OnInit {
     this.idAlumnoEnEdicion = '';  
     this.nombreNuevoAlumno = '';  
     this.emailAlumno = '';  
+    this.passwordAlumno = '';
   }
 
   async guardarSesion() {
@@ -392,7 +424,7 @@ export class App implements OnInit {
 
   async login() {
 
-    if (!this.email || !this.password) {
+    if (!this.email.trim() || !this.password.trim()) {
   
       this.mostrarMensaje(
         'Ingrese correo y contraseña',
@@ -402,13 +434,26 @@ export class App implements OnInit {
       return;
     }
   
+    this.generarHash('123456')
+  .then(hash => console.log(hash));
+    const hashIngresado =
+      await this.generarHash(
+        this.password.trim()
+      );
+  
+    console.log('Email ingresado:', this.email);
+    console.log('Hash ingresado:', hashIngresado);
+    console.log('Alumnos cargados:', this.alumnos);
+  
     const usuario = this.alumnos.find(
       a =>
         a.email.trim().toLowerCase() ===
         this.email.trim().toLowerCase() &&
-        a.password.trim() ===
-        this.password.trim()
+        a.password === hashIngresado
     );
+  
+    console.log('Usuario encontrado:', usuario);
+  
     if (!usuario) {
   
       this.mostrarMensaje(
@@ -418,10 +463,11 @@ export class App implements OnInit {
   
       return;
     }
-    console.log('Usuario encontrado:', usuario);
+  
+    console.log('Rol usuario:', usuario.rol);
   
     if (usuario.rol === 'entrenador') {
-   
+  
       this.rolActual = 'entrenador';
   
     } else {
