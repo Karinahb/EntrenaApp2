@@ -1,0 +1,172 @@
+<div style="max-width: 950px; margin: 0 auto; padding: 20px; font-family: system-ui, sans-serif; color: #333;">
+  
+    <!-- CABECERA -->
+    <header style="text-align: center; margin-bottom: 30px; background: #222; color: white; padding: 20px; border-radius: 8px;">
+      <h1 style="margin: 0; color: #dd0031;">EntrenaApp 🏋️‍♂️</h1>
+      <p style="margin: 5px 0 0 0; color: #aaa;">Panel de Control Profesional</p>
+      
+      <div style="margin-top: 15px; font-size: 0.9rem;" *ngIf="rolActual !== 'anonimo'">
+        Sesión activa: <strong style="color: #fff;">{{ idUsuarioALaVista(rolActual) }}</strong> | 
+        <button (click)="cerrarSesion()" style="background: none; border: none; color: #ff4d4d; cursor: pointer; text-decoration: underline; font-weight: bold;">Cerrar Sesión</button>
+      </div>
+    </header>
+    <div *ngIf="mensaje"style="margin-bottom:20px;padding:12px;border-radius:8px;text-align:center;font-weight:bold;"
+        [style.background]="tipoMensaje === 'success'? '#d4edda': tipoMensaje === 'error'? '#f8d7da': '#d1ecf1'"
+        [style.color]="tipoMensaje === 'success'? '#155724': tipoMensaje === 'error'? '#721c24': '#0c5460'">
+        {{ mensaje }}
+      </div>
+  
+    <!-- SELECCIÓN DE PERFIL (LOGIN) -->
+  <!-- LOGIN -->
+  <main *ngIf="rolActual === 'anonimo'"  style="text-align:center;padding:40px 20px;background:#f9f9f9; border-radius:8px;border:1px solid #eee; max-width:500px; margin:auto;">
+    <h2 style="margin-top:0;"> Iniciar Sesión  </h2>
+  
+    <p style="color:#666;">  Accede con tus credenciales  </p>
+  
+    <div style="display:flex;flex-direction:column; gap:15px; margin-top:25px;">
+  
+      <input type="email"[(ngModel)]="email" placeholder="Correo electrónico" style="padding:12px;  border:1px solid #ccc;border-radius:6px;font-size:1rem;"/>
+  
+      <input type="password" [(ngModel)]="password"  placeholder="Contraseña"style="padding:12px;border:1px solid #ccc;border-radius:6px;font-size:1rem;"/>
+  
+      <button (click)="login()"
+        style="background:#dd0031;color:white;border:none;padding:12px;font-size:1rem;font-weight:bold;border-radius:6px;cursor:pointer;">
+        Ingresar 🔐
+      </button>
+  
+    </div>
+  </main>
+  
+    <!-- PANEL DEL ENTRENADOR -->
+    <main *ngIf="rolActual === 'entrenador'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+      
+      <!-- COLUMNA IZQUIERDA: GESTIÓN (ALUMNOS Y RUTINAS) -->
+      <div style="display: flex; flex-col: column; gap: 25px; flex-direction: column;">
+        
+        <!-- 1. REGISTRAR NUEVO ALUMNO -->
+        <section style="background: #edf4fc; padding: 20px; border-radius: 8px; border: 1px solid #d0e1f5;">
+          <h2 style="margin-top: 0; font-size: 1.1rem; color: #004085; border-bottom: 2px solid #0066cc; padding-bottom: 5px;">＋ Registrar Nuevo Alumno</h2>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <input type="text" [(ngModel)]="nombreNuevoAlumno"  placeholder="Nombre completo" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: white;">
+            <input type="email" [(ngModel)]="emailAlumno"  placeholder="Correo del alumno" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: white;">
+            <input type="password" [(ngModel)]="passwordAlumno"  placeholder="Contraseña temporal" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: white;">
+            <button (click)="guardarAlumno()"style="background: #0066cc; color: white; border: none; padding: 8px 15px; font-weight: bold; border-radius: 4px; cursor: pointer;"> {{ modoEdicionAlumno ? 'Actualizar' : 'Crear Alumno' }}          </button>
+          </div>
+        </section>
+        <div style="margin-top:15px;"  *ngFor="let alumno of alumnos">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:8px;background:white;border:1px solid #ddd;border-radius:5px;">
+            <div>
+              <strong>{{ alumno.nombre }}</strong>
+              <br>
+              <span style="font-size:0.85rem;color:#777;">
+                {{ alumno.email }}
+              </span>
+            </div>
+  
+            <div style="display:flex;gap:8px;">
+              <button (click)="editarAlumno(alumno)"style="background:#0066cc;color:white;border:none;padding:6px 10px;border-radius:4px;">
+                Editar
+              </button>
+              <button (click)="eliminarAlumno(alumno.id)"style="background:#cc0000;color:white;border:none;padding:6px 10px;border-radius:4px;">
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+  
+        <!-- 2. FORMULARIO DE RUTINAS -->
+        <section style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
+          <h2 style="margin-top: 0; font-size: 1.1rem; border-bottom: 2px solid #dd0031; padding-bottom: 5px; color: #dd0031;">
+            {{ modoEdicion ? '✏️ Editar Entrenamiento' : '📋 Cargar Nueva Rutina' }}
+          </h2>
+          
+          <div style="margin-top: 15px; margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Alumno:</label>
+            <select [(ngModel)]="idAlumnoSeleccionado" [disabled]="modoEdicion" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: white;">
+              <option value="" disabled>-- Elige un alumno --</option>
+              <option *ngFor="let al of alumnos" [value]="al.id">{{ al.nombre }}</option>
+            </select>
+          </div>
+  
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fecha:</label>
+            <input type="date" [(ngModel)]="nuevaFecha" style="width: 100%; padding: 8px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc;">
+          </div>
+  
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Ejercicios y Series:</label>
+            <textarea [(ngModel)]="nuevosEjercicios" placeholder="Ej: Prensa 4x12&#10;Zancadas 3x10" rows="5" style="width: 100%; padding: 8px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; resize: vertical;"></textarea>
+          </div>
+  
+          <div style="display: flex; gap: 10px;">
+            <button (click)="guardarSesion()" style="flex: 1; background: #dd0031; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer;">
+              {{ modoEdicion ? 'Guardar Cambios' : 'Asignar a la Nube' }}
+            </button>
+            <button *ngIf="modoEdicion" (click)="cancelarEdicion()" style="background: #666; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">
+              Cancelar
+            </button>
+          </div>
+        </section>
+      </div>
+  
+      <!-- COLUMNA DERECHA: HISTORIAL GLOBAL -->
+      <section>
+        <h2 style="margin-top: 0; font-size: 1.2rem; border-bottom: 2px solid #333; padding-bottom: 5px;">Historial en Base de Datos</h2>
+        <div *ngIf="todasLasSesiones.length === 0" style="color: #888; text-align: center; margin-top: 25px;">
+          No hay registros en Firestore.
+        </div>
+        
+        <div *ngFor="let sesion of todasLasSesiones" style="background: white; border: 1px solid #ddd; border-left: 5px solid #dd0031; padding: 15px; border-radius: 4px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <strong>👤 {{ sesion.alumnoNombre }}</strong>
+            <span style="font-size: 0.85rem; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px;">{{ sesion.fecha }}</span>
+          </div>
+          <p style="margin: 5px 0 10px 0; font-size: 0.95rem; color: #555; background: #fbfbfb; padding: 8px; border-radius: 4px; white-space: pre-line;">{{ sesion.ejercicios }}</p>
+          
+          <!-- Botones de Acción para el Entrenador -->
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button (click)="activarModoEdicion(sesion)" style="background: #e6f2ff; color: #0066cc; border: 1px solid #b3d7ff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">✏️ Editar</button>
+            <button (click)="eliminarSesion(sesion.id)" style="background: #ffe6e6; color: #cc0000; border: 1px solid #ffb3b3; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">🗑️ Borrar</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  
+    <!-- PANEL DEL ALUMNO SELECCIONADO -->
+    <main *ngIf="rolActual !== 'anonimo' && rolActual !== 'entrenador'">
+      <h2 style="margin-top: 0; color: #0066cc;">Tu Agenda de Rutinas</h2>
+      <div *ngIf="sesionesDelAlumnoActual.length === 0" style="text-align: center; padding: 30px; color: #888; background: #f9f9f9; border-radius: 6px;">
+        No tienes ningún entrenamiento asignado para estos días. ¡Descansa! ☕
+      </div>
+      
+      <div style="margin-bottom:20px;padding:15px;background:#fff7e6;border:1px solid #ffd591;border-radius:8px;">
+  
+          <h3 style="margin-top:0;">🏋️ Control de Entrenamiento</h3>
+  
+          <div *ngIf="!entrenamientoActivo">
+            <button (click)="iniciarEntrenamiento()"style="background:#52c41a;color:white;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;font-weight:bold;">
+              ▶ Iniciar Entrenamiento
+            </button>
+          </div>
+          <div *ngIf="entrenamientoActivo">
+            <p>
+              ⏱ Entrenamiento iniciado a las
+              <strong>{{ horaInicio }}</strong>
+            </p>
+  
+            <button (click)="finalizarEntrenamiento()"style="background:#dd0031;color:white;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;font-weight:bold;">
+              ✅ Finalizar Entrenamiento
+            </button>
+          </div>
+        </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+        <div *ngFor="let sesion of sesionesDelAlumnoActual" style="background: #f0f7ff; border: 1px solid #b3d7ff; border-top: 6px solid #0066cc; padding: 20px; border-radius: 8px;">
+          <div style="font-weight: bold; font-size: 1.1rem; color: #004085; margin-bottom: 10px; border-bottom: 1px dashed #b3d7ff; padding-bottom: 5px;">
+            📅 Día: {{ sesion.fecha }}
+          </div>
+          <p style="margin: 0; white-space: pre-line; color: #333; line-height: 1.5; font-size: 1rem; background: white; padding: 10px; border-radius: 4px; border: 1px solid #e1f0ff;">{{ sesion.ejercicios }}</p>
+        </div>
+      </div>
+    </main>
+  
+  </div>
