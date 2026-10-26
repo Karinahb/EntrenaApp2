@@ -4,7 +4,12 @@ import { NgFor, NgIf } from '@angular/common';
 
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { signOut,onAuthStateChanged} from 'firebase/auth';
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+  } from 'firebase/auth';
 
 interface Sesion {
   id?: string;
@@ -16,8 +21,9 @@ interface Sesion {
 interface Alumno {
   id: string;
   nombre: string;
-  email?: string;
+  email: string;
   password: string;
+  rol:string;
 }
 
 interface RegistroEntrenamiento {
@@ -166,7 +172,8 @@ export class App implements OnInit {
             id: doc.id,
             nombre: doc.data()['nombre'],
             email: doc.data()['email'],
-            password: doc.data()['password']
+            password: doc.data()['password'],
+            rol:doc.data()['rol']
           })
         ) as Alumno[];
   
@@ -381,51 +388,7 @@ export class App implements OnInit {
     return alumno ? `${alumno.nombre} (Alumno)` : 'Usuario';
   }
 
-  async login1() {
 
-    if (!this.email || !this.password) {
-      this.mostrarMensaje(
-        'Ingrese correo y contraseña',
-        'error'
-      );
-      return;
-    }
-  
-    try {  
-      const credenciales =
-        await signInWithEmailAndPassword(
-          auth,
-          this.email,
-          this.password
-        );
-  
-      const user = credenciales.user;  
-      this.usuarioActual = user;  
-      if (user.email === 'karinahinostrozab@gmail.com') {
-        this.rolActual = 'entrenador';
-        return;
-      }  
-      const alumno = this.alumnos.find(
-        a => a.email?.toLowerCase() === user.email?.toLowerCase()
-      );  
-      if (alumno) {
-        this.rolActual = alumno.id;
-        this.filtrarSesionesAlumno();
-        return;
-      }  
-      this.mostrarMensaje(
-        'Usuario sin perfil asignado',
-        'error'
-      );
-      
-    } catch (error) {
-      this.mostrarMensaje(
-        '🔒 Correo o contraseña incorrectos',
-        'error'
-      );
-    }
-  
-  }
 
   async login() {
 
@@ -437,59 +400,40 @@ export class App implements OnInit {
       );
   
       return;
-  
     }
   
-    // Entrenador
-  
-    if (
-      this.email ===
-        'karinahinostrozab@gmail.com' &&
-      this.password ===
-        'Karina123'
-    ) {
-  
-      this.rolActual =
-        'entrenador';
+    const usuario = this.alumnos.find(
+      a =>
+        a.email.trim().toLowerCase() ===
+        this.email.trim().toLowerCase() &&
+        a.password.trim() ===
+        this.password.trim()
+    );
+    if (!usuario) {
   
       this.mostrarMensaje(
-        'Bienvenida Karina',
-        'success'
+        'Correo o contraseña incorrectos',
+        'error'
       );
   
       return;
-  
     }
+    console.log('Usuario encontrado:', usuario);
   
-    // Alumno
+    if (usuario.rol === 'entrenador') {
+   
+      this.rolActual = 'entrenador';
   
-    const alumno =
-      this.alumnos.find(
-        a =>
-          a.email.toLowerCase() ===
-            this.email.toLowerCase() &&
-          a.password ===
-            this.password
-      );
+    } else {
   
-    if (alumno) {
-  
-      this.rolActual = alumno.id;
-  
+      this.rolActual = usuario.id;
       this.filtrarSesionesAlumno();
-  
-      this.mostrarMensaje(
-        `Bienvenido ${alumno.nombre}`,
-        'success'
-      );
-  
-      return;
   
     }
   
     this.mostrarMensaje(
-      'Correo o contraseña incorrectos',
-      'error'
+      `Bienvenido ${usuario.nombre}`,
+      'success'
     );
   
   }
